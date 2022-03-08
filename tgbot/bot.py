@@ -206,8 +206,15 @@ def main() -> None:
     #dispatcher.add_handler(MessageHandler(Filters.document, downloader))
     dispatcher.add_handler(MessageHandler(Filters.document, upload))
 
+
+    port = int(os.environ.get('PORT', 5000))
+    updater.start_webhook(listen="0.0.0.0",
+                          port=int(port),
+                          url_path=token)
+    updater.bot.setWebhook('https://drua-tg-bot.herokuapp.com/' + token)
+
     # Start the Bot
-    updater.start_polling()
+    #updater.start_polling()
 
     # Run the bot until you press Ctrl-C or the process receives SIGINT,
     # SIGTERM or SIGABRT. This should be used most of the time, since
