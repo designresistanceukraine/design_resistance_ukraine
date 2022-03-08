@@ -23,6 +23,15 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Callb
 msg_welcome = "Hi, I am bot that helps DRUA to manage files.\n\nYou can send me a file as simply as an attachment - no hashtags, no coding magic ... as easy as it can be!\n"
 msg_help = "1. Click an attachment button which is next to a text message field\n2. Choose your file\n3. Open\n4. Send!\n"
 
+msg_success = "Success!\n\nYour file uploded, thank you! :)\n\nVIVA LA RESSTANCE!"
+msg_in_progress = "...Uploading...\n\nPlease be patient :)"
+msg_error_header = "Sorry, but I cannot open you file :(\n"
+
+msg_error_body = {
+      1 : '\nI can open only raster images and plain text... please make sure you can open your file with the default file viewer on you device.\n'
+    , 2 : '\nYour file seems to be too large.'
+}
+
 # Enable logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO
@@ -30,7 +39,35 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+def get_datafile(file_name):
+    res = "data"
+    with open(file_name) as f:
+        res = f.readline()
+    
+    return res
 
+def check_mime_type(file):
+    mime_type = file.mime_type
+    supported_file_types = get_datafile('mime_filetypes')
+    return mime_type in supported_file_types
+
+def check_size(file):
+    size = int(file.file_size)
+    supported_file_size = int(get_datafile('filesize'))
+    return size <= supported_file_size
+    
+def check_file(file):
+    
+    # todo: write proper error handling
+    # rewrite errors into int bits instead of different int for each error
+    if not check_mime_type(file):
+        return 1
+
+    if not check_size(file):
+        return 2
+
+    return 0
+    
 # Define a few command handlers. These usually take the two arguments update and
 # context.
 def start(update: Update, context: CallbackContext) -> None:
@@ -47,30 +84,43 @@ def help_command(update: Update, context: CallbackContext) -> None:
     """Send a message when the command /help is issued."""
     update.message.reply_text(msg_help)
 
-
+'''
 def echo(update: Update, context: CallbackContext) -> None:
     """Echo the user message."""
     update.message.reply_text(update.message.text)
-
+'''
 def upload(update: Update, context: CallbackContext) ->None:
     """Upload a file to the storage"""
     
+    msg = update.message
+    
+    print('\n\n', msg, '\n\n')
+    
     print("\n\nUpload...")
-    file_id = update.message.document.file_id
-    file_name =  update.message.document.file_name
+    user_name = msg.chat.username
+    file_id = msg.document.file_id
+    file_name = msg.document.file_name
     
     print("", file_id, file_name)
 
     # path to the storage in a format C:/TEMP/
-    path_storage = "PATH"
-    with open('path_storage.secret') as f:
-        path_storage = f.readline()
-        
-    print(path_storage)
-    file = context.bot.get_file(file_id)
+    path_storage = get_datafile('path_storage.secret')
 
-    file.download(path_storage+file_id+file_name)
-    
+    err = check_file(msg.document)
+    if(0 == err):
+        msg.reply_text(msg_in_progress)
+
+        file = context.bot.get_file(file_id)
+
+        file.download(path_storage+file_id+file_name)
+
+        msg.reply_text(msg_success)
+
+    else:
+
+        msg.reply_text(msg_error_header + msg_error_body[err])
+
+'''
 def downloader(update, context):
     context.bot.get_file(update.message.document).download()
     
@@ -83,6 +133,7 @@ def downloader(update, context):
     #file_id = message.voice.file_id
     #newFile = bot.get_file(file_id)
     #newFile.download('voice.ogg')
+'''
 
 '''
 {'group_chat_created': False, 'document': {'file_name': 'testbot.txt', 'mime_type': 'text/plain', 'file_size': 7, 'file_id': 'BQACAgIAAxkBAAMdYiY3l1Cw7CEunj0llm1YctuvnuYAAl8XAALk2TBJKDygbUFN9LkjBA', 'file_unique_id': 'AgADXxcAAuTZMEk'}, 'chat': {'last_name': 'Radomskyi', 'type': 'private', 'username': 'Ambreaux', 'first_name': 'Oleksandr', 'id': 344195365}, 'delete_chat_photo': False, 'photo': [], 'channel_chat_created': False, 'date': 1646671767, 'message_id': 29, 'caption_entities': [], 'new_chat_members': [], 'new_chat_photo': [], 'supergroup_chat_created': False, 'entities': [], 'from': {'username': 'Ambreaux', 'first_name': 'Oleksandr', 'language_code': 'en', 'id': 344195365, 'is_bot': False, 'last_name': 'Radomskyi'}}
@@ -92,9 +143,7 @@ def downloader(update, context):
 def main() -> None:
     """Start the bot."""
     
-    token = "TOKEN"
-    with open('token.secret') as f:
-        token = f.readline()
+    token = get_datafile('token.secret')
     
     # Create the Updater and pass it your bot's token.
     updater = Updater(token, use_context=True)
@@ -109,7 +158,7 @@ def main() -> None:
     
 
     # on non command i.e message - echo the message on Telegram
-    dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, echo))
+    #dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, echo))
 
     #dispatcher.add_handler(MessageHandler(Filters.document, downloader))
     dispatcher.add_handler(MessageHandler(Filters.document, upload))
