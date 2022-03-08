@@ -23,7 +23,7 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, Callb
 msg_welcome = "Hi, I am bot that helps DRUA to manage files.\n\nYou can send me a file as simply as an attachment - no hashtags, no coding magic ... as easy as it can be!\n"
 msg_help = "1. Click an attachment button which is next to a text message field\n2. Choose your file\n3. Open\n4. Send!\n"
 
-msg_success = "Success!\n\nYour file uploded, thank you! :)\n\nVIVA LA RESSTANCE!"
+msg_success = "Success!\n\nYour file uploded, thank you! :)\n\nVive la Résistance!"
 msg_in_progress = "...Uploading...\n\nPlease be patient :)"
 msg_error_header = "Sorry, but I cannot open you file :(\n"
 
