@@ -15,13 +15,19 @@ Press Ctrl-C on the command line or send a signal to the process to stop the
 bot.
 """
 
+from datetime import datetime
+
 import logging
 
 from telegram import Update, ForceReply
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
-msg_welcome = "Hi, I am bot that helps DRUA to manage files.\n\nYou can send me a file as simply as an attachment - no hashtags, no coding magic ... as easy as it can be!\n"
-msg_help = "1. Click an attachment button which is next to a text message field\n2. Choose your file\n3. Open\n4. Send!\n"
+msg_welcome = '''Hi, I am bot that helps DRUA to manage files.\n\nTo upload a file just drop it in this chat window, for images choose Image without compression, also you can upload file as an attachment.\n'''
+
+msg_help = '''Drag-and-drop your file into this chat window.\n'''+ \
+'''\nFor images choose upper box with message 'Drop images here to send them without compression'.\n '''+ \
+'''\nFor text just drop and send, that is it. \n''' + \
+'''\nIf you want you can attach your file:\n\n1. Click an attachment button which is next to a text message field\n2. Choose your file\n3. Open\n4. Send!\n'''
 
 msg_success = "Success!\n\nYour file uploded, thank you! :)\n\nVive la Résistance!"
 msg_in_progress = "...Uploading...\n\nPlease be patient :)"
@@ -97,6 +103,7 @@ def upload(update: Update, context: CallbackContext) ->None:
     print('\n\n', msg, '\n\n')
     
     print("\n\nUpload...")
+    unix_date = str(datetime.timestamp(msg.date))
     user_name = msg.chat.username
     file_id = msg.document.file_id
     file_name = msg.document.file_name
@@ -112,7 +119,11 @@ def upload(update: Update, context: CallbackContext) ->None:
 
         file = context.bot.get_file(file_id)
 
-        file.download(path_storage+file_id+file_name)
+        file.download(path_storage + \
+            unix_date + '_' + \
+            user_name + '_' + \
+            #file_id + '_' + \
+            file_name)
 
         msg.reply_text(msg_success)
 
