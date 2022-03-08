@@ -186,10 +186,10 @@ def downloader(update, context):
 def main() -> None:
     """Start the bot."""
     
-    token = get_datafile('token.secret')
+    TOKEN = os.environ.get('TOKEN', 80)
     
     # Create the Updater and pass it your bot's token.
-    updater = Updater(token, use_context=True)
+    updater = Updater(TOKEN, use_context=True)
 
     # Get the dispatcher to register handlers
     dispatcher = updater.dispatcher
@@ -207,11 +207,12 @@ def main() -> None:
     dispatcher.add_handler(MessageHandler(Filters.document, upload))
 
 
-    port = int(os.environ.get('PORT', 5000))
+    port = int(os.environ.get('PORT', 80))
     updater.start_webhook(listen="0.0.0.0",
                           port=int(port),
-                          url_path=token)
-    updater.bot.setWebhook('https://drua-tg-bot.herokuapp.com/' + token)
+                          url_path=TOKEN,
+                          webhook_url = 'https://drua-tg-bot.herokuapp.com/' + TOKEN )
+
 
     # Start the Bot
     #updater.start_polling()
