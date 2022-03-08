@@ -1,22 +1,7 @@
-#!/usr/bin/env python
-# pylint: disable=C0116,W0613
-# This program is dedicated to the public domain under the CC0 license.
-
-"""
-Simple Bot to reply to Telegram messages.
-
-First, a few handler functions are defined. Then, those functions are passed to
-the Dispatcher and registered at their respective places.
-Then, the bot is started and runs until we press Ctrl-C on the command line.
-
-Usage:
-Basic Echobot example, repeats messages.
-Press Ctrl-C on the command line or send a signal to the process to stop the
-bot.
-"""
-
+import hashlib
+import re
+import os
 from datetime import datetime
-
 import logging
 
 from telegram import Update, ForceReply
@@ -30,12 +15,13 @@ msg_help = '''Drag-and-drop your file into this chat window.\n'''+ \
 '''\nIf you want you can attach your file:\n\n1. Click an attachment button which is next to a text message field\n2. Choose your file\n3. Open\n4. Send!\n'''
 
 msg_success = "Success!\n\nYour file uploded, thank you! :)\n\nVive la Résistance!"
-msg_in_progress = "...Uploading...\n\nPlease be patient :)"
+msg_in_progress = "Uploading(please be patient) file:\n"
 msg_error_header = "Sorry, but I cannot open you file :(\n"
 
 msg_error_body = {
       1 : '\nI can open only raster images and plain text... please make sure you can open your file with the default file viewer on you device.\n'
     , 2 : '\nYour file seems to be too large.'
+    , 3 : '\nI already have this file in my storage!'
 }
 
 # Enable logging
@@ -45,6 +31,16 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+def get_filecontent_hash(filename):
+    sha256_hash = hashlib.sha256()
+    with open(filename,"rb") as f:
+        # Read and update hash string value in blocks of 4K
+        for byte_block in iter(lambda: f.read(4096),b""):
+            sha256_hash.update(byte_block)
+        print(sha256_hash.hexdigest())
+
+    return str(sha256_hash.hexdigest())
+    
 def get_datafile(file_name):
     res = "data"
     with open(file_name) as f:
@@ -61,7 +57,27 @@ def check_size(file):
     size = int(file.file_size)
     supported_file_size = int(get_datafile('filesize'))
     return size <= supported_file_size
+
+def check_file_exists(file):
+    path_storage = get_datafile('path_storage.secret')
+    file_uid = file.file_unique_id
+    file_hash = file.file_hash
     
+    # TODO:
+    # this is potential memory and speed bottleneck
+    # need to use database instead of listing files every time
+    listdir = os.listdir(path_storage)
+
+    #print('listdir', listdir)
+    print('uid',file_uid)
+    print('file_hash',file_hash)
+    
+    result = [f for f in listdir if re.search(r'('+file_hash+'|'+file_uid+').*$', f)]
+    #for v in result:
+    #    print(v)
+
+    return 0 == len(result) or 0 == len(listdir)
+
 def check_file(file):
     
     # todo: write proper error handling
@@ -71,7 +87,10 @@ def check_file(file):
 
     if not check_size(file):
         return 2
-
+    
+    if not check_file_exists(file):
+        return 3
+        
     return 0
     
 # Define a few command handlers. These usually take the two arguments update and
@@ -97,39 +116,52 @@ def echo(update: Update, context: CallbackContext) -> None:
 '''
 def upload(update: Update, context: CallbackContext) ->None:
     """Upload a file to the storage"""
-    
     msg = update.message
-    
     print('\n\n', msg, '\n\n')
-    
-    print("\n\nUpload...")
+
     unix_date = str(datetime.timestamp(msg.date))
     user_name = msg.chat.username
     file_id = msg.document.file_id
+    file_uid = msg.document.file_unique_id
     file_name = msg.document.file_name
     
-    print("", file_id, file_name)
+    msg.reply_text(msg_in_progress+'\n'+file_name)
 
+    file = context.bot.get_file(file_id)
+    
     # path to the storage in a format C:/TEMP/
     path_storage = get_datafile('path_storage.secret')
-
+    path_temp = get_datafile('path_temp.secret')
+    
+    file_tmp = path_temp + \
+        unix_date + '_' + \
+        user_name + '_' + \
+        file_uid + '_' + \
+        file_name
+    
+    file.download(file_tmp)
+    file_hash = get_filecontent_hash(file_tmp)
+    
+    os.remove(file_tmp)
+    msg.document.file_hash = file_hash
+    
     err = check_file(msg.document)
+    
     if(0 == err):
-        msg.reply_text(msg_in_progress)
-
-        file = context.bot.get_file(file_id)
-
-        file.download(path_storage + \
+        file_storage_path = path_storage + \
             unix_date + '_' + \
             user_name + '_' + \
-            #file_id + '_' + \
-            file_name)
-
-        msg.reply_text(msg_success)
+            file_hash + '_' + \
+            file_name
+        
+        file.download(file_storage_path)
+        msg.reply_text(file_name+'\n\n'+msg_success)
 
     else:
 
-        msg.reply_text(msg_error_header + msg_error_body[err])
+        msg.reply_text(msg_error_header + '\n' \
+        + file_name + '\n' \
+        + msg_error_body[err])
 
 '''
 def downloader(update, context):
