@@ -1,0 +1,41 @@
+filename, as you see it in a google storage
+
+1647216763.0_Annyshka0704_689801481_Аннушка_userlname_0b56b766872c2b91d603992abc9bdcb819fc1cd6afec1e5c788b77bc46f0cf78_photo.jpg
+
+represents the following:
+
+<unix timestamp>_<user name>_<user unique id>_<user first name(if available)>_<user last name(if available)>_<SHA256 hash sum of the file content>_<name of a file>.<file extension>
+
+
+<unix timestamp>
+    is the number representing the date and time when a file has been uploaded
+    can be converted into a human-readable format using this website
+    https://www.epochconverter.com/
+    
+<user_name>
+    @nickname of a user, which they are using for referencing and searching their telegram account
+
+<user unique id>
+    is a number assigned by telegram when user created their account
+    this number is persistent over time and does not change when the user
+    changes their username, last, or first name
+    
+<user first name(if available)>
+    the first name of a user, telegram supports Unicode so it can have very fancy characters
+    when the user did not specify their first name, our engine will put a placeholder 'userfname'
+
+<user last name(if available)>
+    the last name of a user, telegram supports Unicode so it can have very fancy characters
+    when the user did not specify their first name, our engine will put a placeholder 'userlname'
+
+<SHA256 hash sum of the file content>
+    to avoid duplicate files, we are checking the binary file content and generating the string using SHA256 encoding algorithm
+    if there are several files, which are renamed copies of one file - we will keep only one of these files
+    if there are several files, which are the same image but saved as different file types - we keep all of them
+    
+<name of a file>
+    name of a file, when the user is sending photos our engine uses placeholder 'photo' and when file - we write 'file'
+
+<file extension>
+    png, jpeg, jpg, txt
+    when user is sending photos engine puts 'jpg'
